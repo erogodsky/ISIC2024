@@ -188,14 +188,15 @@ def get_transform(resize, phase='train'):
             transforms.Resize(size=(int(resize[0] / 0.875), int(resize[1] / 0.875))),
             transforms.RandomCrop(resize),
             transforms.RandomHorizontalFlip(0.5),
+            transforms.RandomVerticalFlip(0.5),
             transforms.ColorJitter(brightness=0.126, saturation=0.5),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            transforms.Normalize(mean=[139.378, 139.378, 139.378], std=[33.040, 33.040, 33.040])
         ])
     else:
         return transforms.Compose([
             transforms.Resize(size=(int(resize[0] / 0.875), int(resize[1] / 0.875))),
             transforms.CenterCrop(resize),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            transforms.Normalize(mean=[139.378, 139.378, 139.378], std=[33.040, 33.040, 33.040])
         ])

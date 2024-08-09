@@ -20,10 +20,10 @@ import apex
 from apex.parallel import DistributedDataParallel as DDP
 
 import argparse
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--local_rank', type=int, default=0)
 args = parser.parse_args()
-
 
 # General loss functions
 cross_entropy_loss = nn.CrossEntropyLoss()
@@ -39,6 +39,7 @@ crop_metric = TopKAccuracyMetric(topk=(1, 5))
 drop_metric = TopKAccuracyMetric(topk=(1, 5))
 
 best_acc = 0.0
+
 
 def main():
     torch.cuda.set_device(args.local_rank)
@@ -81,7 +82,7 @@ def main():
 
         # Get epoch and some logs
         logs = checkpoint['logs']
-        start_epoch = int(logs['epoch']) # start from the beginning
+        start_epoch = int(logs['epoch'])  # start from the beginning
 
         # Load weights
         state_dict = checkpoint['state_dict']
@@ -113,15 +114,13 @@ def main():
     net, optimizer = amp.initialize(net, optimizer, opt_level='O0')
     net = DDP(net, delay_allreduce=True)
 
-
     train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
     val_sampler = torch.utils.data.distributed.DistributedSampler(validate_dataset)
 
     train_loader, validate_loader = DataLoader(train_dataset, batch_size=config.batch_size, sampler=train_sampler,
                                                num_workers=config.workers, pin_memory=True, drop_last=True), \
-                                    DataLoader(validate_dataset, batch_size=config.batch_size * 4, sampler=val_sampler,
-                                               num_workers=config.workers, pin_memory=True, drop_last=True)
-
+        DataLoader(validate_dataset, batch_size=config.batch_size * 4, sampler=val_sampler,
+                   num_workers=config.workers, pin_memory=True, drop_last=True)
 
     if args.local_rank == 0:
         callback_monitor = 'val_{}'.format(raw_metric.name)
@@ -170,6 +169,7 @@ def main():
         if args.local_rank == 0:
             callback.on_epoch_end(logs, net, feature_center=feature_center)
             pbar.close()
+
 
 def adjust_learning(optimizer, epoch, iter):
     """Decay the learning rate based on schedule"""
@@ -342,7 +342,6 @@ def validate(**kwargs):
         if epoch % 10 == 0:
             save_model(net, logs, 'model_epoch%d.pth' % epoch)
 
-
         batch_info = 'Val Loss {:.4f}, Val Acc ({:.2f}, {:.2f}), Val Aux Acc ({:.2f}, {:.2f}), Best {:.2f}'.format(
             epoch_loss, epoch_acc[0], epoch_acc[1], aux_acc[0], aux_acc[1], best_acc)
         print(batch_info)
@@ -351,8 +350,10 @@ def validate(**kwargs):
         logging.info('Valid: {}, Time {:3.2f}'.format(batch_info, end_time - start_time))
         logging.info('')
 
+
 def save_model(net, logs, ckpt_name):
     torch.save({'logs': logs, 'state_dict': net.module.state_dict()}, config.save_dir + 'model_bestacc.pth')
+
 
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
@@ -369,11 +370,13 @@ def accuracy(output, target, topk=(1,)):
         res.append(correct_k.mul_(100.0 / batch_size))
     return res
 
+
 def reduce_tensor(tensor):
     rt = tensor.clone()
     torch.distributed.all_reduce(rt, op=torch.distributed.reduce_op.SUM)
     rt /= args.world_size
     return rt
+
 
 def gather_tensor(tensor):
     rt = tensor.clone()
@@ -382,6 +385,6 @@ def gather_tensor(tensor):
     gather_t = torch.cat(gather_t, dim=0)
     return gather_t
 
+
 if __name__ == '__main__':
     main()
-
